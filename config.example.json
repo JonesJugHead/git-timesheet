@@ -1,0 +1,22 @@
+{
+  "root": "C:/git",
+  "exclude": ["private", "node_modules"],
+  "remoteMatch": "my-company",
+  "authors": ["me@example.com", "MyGitHubLogin"],
+  "since": "2026-01-01",
+  "dayStartsAtHour": 5,
+  "aliases": {
+    "client-azure": "client",
+    "client-wt": "client"
+  },
+  "ignorePaths": [
+    "(^|/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|composer\.lock|Podfile\.lock|Gemfile\.lock|bun\.lockb?)$",
+    "(^|/)(node_modules|vendor|dist|build|out|\.next|coverage|Pods)/",
+    "\.(min\.js|min\.css|map|snap|svg|lock)$",
+    "(^|/)(generated|__generated__)/"
+  ],
+  "maxLinesPerFile": 800,
+  "maxLinesPerCommit": 2500,
+  "pointsPerEvent": 0.5,
+  "maxEventPointsPerRepoDay": 3
+}

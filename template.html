@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Répartition git</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --head: #f0f2f5; --text: #1b1f24; --muted: #667085; --line: #e4e7ec;
+    --we: #eef0f3; --accent: #1f9d55; --tint: 31, 157, 85; --today: #2563eb;
+    --h0: #eceff3; --h1: #b7e4c7; --h2: #74c69d; --h3: #40a368; --h4: #1b7a43;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1216; --panel: #1b1f24; --head: #23282e; --text: #e6edf3; --muted: #8b949e; --line: #30363d;
+      --we: #262b31; --accent: #3fb950; --tint: 63, 185, 80; --today: #4f8cff;
+      --h0: #21262d; --h1: #0e4429; --h2: #006d32; --h3: #26a641; --h4: #39d353;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 1500px; margin: 0 auto; padding: 24px 16px 64px; }
+  header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  h1 { font-size: 20px; margin: 0; }
+  h2 { font-size: 15px; margin: 32px 0 12px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  button, select { font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  .seg { display: inline-flex; }
+  .seg button { border-radius: 0; }
+  .seg button:first-child { border-radius: 6px 0 0 6px; }
+  .seg button:last-child { border-radius: 0 6px 6px 0; margin-left: -1px; }
+  .seg button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  #period { font-weight: 600; min-width: 190px; text-align: center; }
+  .muted { color: var(--muted); }
+  .wrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+  table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { border: 1px solid var(--line); padding: 0; text-align: center; }
+  thead th { background: var(--head); font-size: 11px; font-weight: 500; color: var(--muted); }
+  th.wk { text-align: left; padding: 4px 8px; font-size: 12px; }
+  th.dd { padding: 3px 2px; line-height: 1.25; }
+  th.dd b { display: block; font-size: 13px; color: var(--text); }
+  th.dd.today, th.dd.today b { color: var(--today); }
+  th.name, td.name { text-align: left; padding: 8px 12px; min-width: 260px; position: sticky; left: 0; background: var(--panel); z-index: 1; }
+  thead th.name { background: var(--head); }
+  td.name b { display: block; }
+  td.name span { font-size: 12px; color: var(--muted); }
+  tr.sum td { background: var(--head); font-weight: 600; }
+  tr.sum td.name { background: var(--head); }
+  td.v { height: 46px; font-size: 13px; }
+  td.v.we, th.dd.we { background: var(--we); }
+  td.v.hint { color: var(--muted); }
+  td.v small { display: block; font-size: 10px; color: var(--muted); font-weight: 400; }
+  .month td.v, .month th.dd { width: 38px; min-width: 38px; }
+  .week td.v, .week th.dd { width: 120px; min-width: 120px; }
+  .week td.v { height: 58px; font-size: 16px; }
+  .week th.dd b { font-size: 15px; }
+  .details { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+  .card > b { display: block; font-size: 15px; }
+  .card ul { margin: 8px 0 0; padding: 0; list-style: none; font-size: 12px; }
+  .card li { padding: 3px 0; border-top: 1px solid var(--line); display: flex; gap: 8px; }
+  .card li span:first-child { color: var(--muted); flex: none; width: 74px; }
+  .card li span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+  .grid { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, 12px); gap: 3px; margin-top: 10px; }
+  .grid i { width: 12px; height: 12px; border-radius: 2px; background: var(--h0); }
+  #tip { position: fixed; pointer-events: none; z-index: 10; max-width: 460px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 6px 24px rgba(0,0,0,.18); display: none; }
+  #tip div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .note { font-size: 12px; margin-top: 8px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Répartition par projet</h1>
+    <div class="controls">
+      <div class="seg"><button id="vWeek">Semaine</button><button id="vMonth">Mois</button></div>
+      <button id="prev" aria-label="Précédent">‹</button>
+      <span id="period"></span>
+      <button id="next" aria-label="Suivant">›</button>
+      <button id="today">Aujourd'hui</button>
+      <label class="muted">Pas
+        <select id="step"><option value="0.25" selected>0,25 j</option><option value="0.5">0,5 j</option><option value="0.1">0,1 j</option></select>
+      </label>
+      <label class="muted"><input type="checkbox" id="weekends"> compter les week-ends</label>
+      <button id="copy">Copier</button>
+    </div>
+  </header>
+
+  <div class="wrap"><table id="table"></table></div>
+  <p class="note muted">Chaque jour travaillé vaut 1 j, réparti selon les points : 1 + √(lignes modifiées) par commit, hors lockfiles et fichiers générés. Merge = 1 point, checkout/pull/rebase = 0,5 (3 max par repo et par jour). Une journée commence à <span id="dayStart"></span>h. Généré le <span id="gen"></span>.</p>
+
+  <section id="weekDetails"></section>
+
+  <h2>Activité sur 12 semaines</h2>
+  <div class="cards" id="cards"></div>
+</main>
+<div id="tip"></div>
+<script>
+const DATA = /*DATA*/null
+const $ = (id) => document.getElementById(id)
+const pad = (n) => String(n).padStart(2, '0')
+const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+const label = (k) => DATA.projects[k]?.label ?? k
+const num = (v) => String(Math.round(v * 100) / 100).replace('.', ',')
+const fmt = (o) => new Intl.DateTimeFormat('fr-BE', o)
+const wdShort = fmt({ weekday: 'short' }), wdLong = fmt({ weekday: 'long', day: 'numeric', month: 'long' })
+const isWe = (d) => d.getDay() === 0 || d.getDay() === 6
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x }
+const monday = (d) => addDays(new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12), -((d.getDay() + 6) % 7))
+const isoWeek = (d) => {
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()))
+  t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay() || 7))
+  return Math.ceil(((t - Date.UTC(t.getUTCFullYear(), 0, 1)) / 864e5 + 1) / 7)
+}
+
+const lastDay = Object.keys(DATA.days).sort().pop()
+let view = 'week'
+let cursor = monday(lastDay ? new Date(lastDay + 'T12:00') : new Date())
+let copyRows = []
+
+function split(day, step, cols) {
+  const sum = cols.reduce((a, c) => a + (day[c]?.points ?? 0), 0)
+  if (!sum) return null
+  const units = Math.round(1 / step)
+  const raw = cols.map((c) => ((day[c]?.points ?? 0) / sum) * units)
+  const out = raw.map(Math.floor)
+  let left = units - out.reduce((a, b) => a + b, 0)
+  raw.map((r, i) => [r - Math.floor(r), i]).sort((a, b) => b[0] - a[0]).forEach(([, i]) => { if (left > 0) { out[i]++; left-- } })
+  return out.map((u) => u * step)
+}
+
+function range() {
+  if (view === 'week') return Array.from({ length: 7 }, (_, i) => addDays(cursor, i))
+  const y = cursor.getFullYear(), m = cursor.getMonth(), out = []
+  for (let d = new Date(y, m, 1, 12); d.getMonth() === m; d = addDays(d, 1)) out.push(d)
+  return out
+}
+
+function render() {
+  $('vWeek').classList.toggle('on', view === 'week')
+  $('vMonth').classList.toggle('on', view === 'month')
+  const step = Number($('step').value)
+  const withWe = $('weekends').checked
+  const dates = range()
+  const todayIso = iso(new Date())
+  $('period').textContent = view === 'week'
+    ? `S${isoWeek(cursor)} · ${fmt({ day: 'numeric', month: 'short' }).format(dates[0])} → ${fmt({ day: 'numeric', month: 'short', year: 'numeric' }).format(dates[6])}`
+    : fmt({ month: 'long', year: 'numeric' }).format(cursor)
+
+  const pts = {}
+  for (const d of dates) for (const [p, b] of Object.entries(DATA.days[iso(d)] ?? {})) pts[p] = (pts[p] ?? 0) + b.points
+  const cols = Object.keys(pts).sort((a, b) => pts[b] - pts[a])
+  const counted = (d) => withWe || !isWe(d)
+  const alloc = dates.map((d) => (counted(d) ? split(DATA.days[iso(d)] ?? {}, step, cols) : null))
+  const rowTotal = cols.map((_, i) => alloc.reduce((a, s) => a + (s?.[i] ?? 0), 0))
+  const done = alloc.filter(Boolean).length
+  const expected = dates.filter((d) => !isWe(d)).length
+
+  const weeks = []
+  dates.forEach((d) => { const w = isoWeek(d); if (weeks.at(-1)?.w === w) weeks.at(-1).n++; else weeks.push({ w, n: 1 }) })
+
+  let h = `<thead><tr><th class="name" rowspan="2"></th>${weeks.map((w) => `<th class="wk" colspan="${w.n}">S${w.w}</th>`).join('')}</tr><tr>`
+  h += dates.map((d) => `<th class="dd ${isWe(d) ? 'we' : ''} ${iso(d) === todayIso ? 'today' : ''}">${view === 'week' ? wdShort.format(d) : wdShort.format(d).slice(0, 3)}<b>${d.getDate()}</b></th>`).join('')
+  h += `</tr></thead><tbody>`
+  h += `<tr class="sum"><td class="name">Total attendu · ${expected} j</td>${dates.map((d) => `<td class="v ${isWe(d) ? 'we' : ''}">${isWe(d) ? '' : 1}</td>`).join('')}</tr>`
+  cols.forEach((c, i) => {
+    if (!rowTotal[i]) return
+    h += `<tr><td class="name"><b>${label(c)}</b><span>${num(rowTotal[i])} j</span></td>`
+    dates.forEach((d, j) => {
+      const b = DATA.days[iso(d)]?.[c]
+      const v = alloc[j]?.[i] ?? 0
+      const we = isWe(d) ? 'we' : ''
+      if (v) {
+        const sub = view === 'week' ? `<small>${b.commits} commit${b.commits > 1 ? 's' : ''} · ${b.lines} l</small>` : ''
+        h += `<td class="v ${we}" data-day="${iso(d)}" data-p="${c}" style="background:rgba(var(--tint),${0.12 + v * 0.45})">${num(v)}${sub}</td>`
+      } else if (b) {
+        h += `<td class="v hint ${we}" data-day="${iso(d)}" data-p="${c}">·</td>`
+      } else h += `<td class="v ${we}"></td>`
+    })
+    h += `</tr>`
+  })
+  h += `<tr class="sum"><td class="name">Total réalisé · ${num(done)} j</td>${alloc.map((s, j) => `<td class="v ${isWe(dates[j]) ? 'we' : ''}">${s ? 1 : ''}</td>`).join('')}</tr></tbody>`
+  $('table').className = view
+  $('table').innerHTML = h
+
+  copyRows = [['Projet', ...dates.map((d) => iso(d))], ...cols.flatMap((c, i) => (rowTotal[i] ? [[label(c), ...alloc.map((s) => (s?.[i] ? num(s[i]) : ''))]] : []))]
+  renderWeekDetails(dates, cols)
+  renderCards()
+}
+
+function renderWeekDetails(dates, cols) {
+  if (view !== 'week' || !cols.length) { $('weekDetails').innerHTML = ''; return }
+  const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
+  const cards = cols.map((c) => {
+    const items = dates.flatMap((d) => (DATA.days[iso(d)]?.[c]?.items ?? []).map((it) => ({ ...it, d })))
+    if (!items.length) return ''
+    items.sort((a, b) => a.t - b.t)
+    return `<div class="card"><b>${label(c)}</b><ul>${items.map((it) => `<li><span>${wdShort.format(it.d)} ${it.d.getDate()} · ${it.repo.split('/').pop().replace(/^.*?-(?=[a-z]+$)/, '')}</span><span title="${esc(it.subject)}">${esc(it.subject)}</span></li>`).join('')}</ul></div>`
+  }).join('')
+  $('weekDetails').innerHTML = cards ? `<h2>Ce que tu as fait cette semaine</h2><div class="details">${cards}</div>` : ''
+}
+
+function renderCards() {
+  const end = view === 'week' ? addDays(cursor, 6) : new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0, 12)
+  const start = monday(addDays(end, -7 * 12 + 1))
+  const dates = []
+  for (let d = start; d <= end; d = addDays(d, 1)) dates.push(iso(d))
+  const stats = {}
+  for (const k of dates) for (const [p, b] of Object.entries(DATA.days[k] ?? {})) {
+    stats[p] ??= { pts: 0, days: 0, max: 0 }
+    stats[p].pts += b.points; stats[p].days++; stats[p].max = Math.max(stats[p].max, b.points)
+  }
+  const order = Object.keys(stats).sort((a, b) => stats[b].pts - stats[a].pts)
+  $('cards').innerHTML = order.map((p) => {
+    const s = stats[p]
+    const cells = dates.map((k) => {
+      const v = DATA.days[k]?.[p]?.points ?? 0
+      const lvl = v ? Math.min(4, 1 + Math.floor((v / s.max) * 3.99)) : 0
+      return `<i style="background:var(--h${lvl})" ${v ? `data-day="${k}" data-p="${p}"` : ''}></i>`
+    }).join('')
+    return `<div class="card"><b>${label(p)}</b><span class="muted">${Math.round(s.pts)} points sur ${s.days} jours</span><div class="grid">${cells}</div></div>`
+  }).join('') || '<p class="muted">Rien sur la période.</p>'
+}
+
+const escTip = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
+document.addEventListener('mousemove', (e) => {
+  const el = e.target.closest('[data-day]')
+  const tip = $('tip')
+  if (!el) { tip.style.display = 'none'; return }
+  const b = DATA.days[el.dataset.day][el.dataset.p]
+  const items = [...b.items].sort((x, y) => x.t - y.t)
+  tip.innerHTML = `<strong>${label(el.dataset.p)}</strong> · ${wdLong.format(new Date(el.dataset.day + 'T12:00'))} · ${Math.round(b.points)} pts, ${b.commits} commits, ${b.lines} lignes${b.events ? `, ${b.events} checkout/pull` : ''}`
+    + items.slice(0, 14).map((i) => `<div class="muted">${i.repo.split('/').pop()} · +${i.lines} · ${escTip(i.subject)}</div>`).join('')
+    + (items.length > 14 ? `<div class="muted">… ${items.length - 14} autres</div>` : '')
+  tip.style.display = 'block'
+  const x = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 8)
+  const y = e.clientY + 14 + tip.offsetHeight > innerHeight ? e.clientY - tip.offsetHeight - 10 : e.clientY + 14
+  tip.style.left = x + 'px'; tip.style.top = y + 'px'
+})
+
+const move = (dir) => {
+  if (view === 'week') cursor = addDays(cursor, 7 * dir)
+  else cursor = new Date(cursor.getFullYear(), cursor.getMonth() + dir, 1, 12)
+  render()
+}
+$('prev').onclick = () => move(-1)
+$('next').onclick = () => move(1)
+$('today').onclick = () => { cursor = view === 'week' ? monday(new Date()) : new Date(new Date().getFullYear(), new Date().getMonth(), 1, 12); render() }
+$('vWeek').onclick = () => { view = 'week'; cursor = monday(cursor.getDate() === 1 ? addDays(cursor, 3) : cursor); render() }
+$('vMonth').onclick = () => { view = 'month'; const t = addDays(cursor, 3); cursor = new Date(t.getFullYear(), t.getMonth(), 1, 12); render() }
+$('step').onchange = render
+$('weekends').onchange = render
+document.addEventListener('keydown', (e) => { if (e.key === 'ArrowLeft') move(-1); if (e.key === 'ArrowRight') move(1) })
+$('copy').onclick = async () => {
+  await navigator.clipboard.writeText(copyRows.map((r) => r.join('\t')).join('\n'))
+  $('copy').textContent = 'Copié'
+  setTimeout(() => ($('copy').textContent = 'Copier'), 1200)
+}
+$('gen').textContent = new Date(DATA.generatedAt).toLocaleString('fr-BE')
+$('dayStart').textContent = DATA.dayStartsAtHour
+render()
+</script>
+</body>
+</html>
